@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>全一AI數學小助手 🤖</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", sans-serif;
+      margin: 0; padding: 0; text-align: center;
+      overflow-x: hidden;
+      background: url("classroom.jpg") no-repeat center center fixed;
+      background-size: cover;
+    }
+    #startScreen {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.9);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 100;
+    }
+    #startBtn, #restartBtn, #musicBtn, #teacherBtn, #teacherStartBtn, #exitBtn {
+      font-size: 1.1em; padding: 10px 20px;
+      border: none; border-radius: 10px;
+      background: linear-gradient(to bottom, #48cae4, #0096c7);
+      color: white; cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      margin: 8px;
+    }
+    #teacherPanel {
+      display:none; background:white; padding:20px; border-radius:12px;
+      box-shadow:0 4px 10px rgba(0,0,0,0.3); margin-top:20px;
+      text-align:left;
+    }
+    header {
+      background: rgba(0, 119, 182, 0.9); color: white;
+      padding: 12px; display: flex; justify-content: space-around;
+      flex-wrap: wrap; z-index: 1;
+    }
+    #gameCard {
+      max-width: 550px; margin: 20px auto; padding: 20px;
+      background: rgba(255,255,255,0.9);
+      border-radius: 15px; box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+      display: none; position: relative; z-index: 1;
+    }
+    #robotImg { width: 120px; margin: 10px auto; }
+    #question { font-size: 1.5em; margin: 15px 0; color: #023e8a; }
+    #picQuestion { font-size: 2em; margin: 15px 0; }
+    #feedback { font-size: 1.2em; min-height: 2em; color: #0096c7; }
+    #answerInput {
+      font-size: 1.2em; padding: 10px; border: 2px solid #0096c7;
+      border-radius: 8px; width: 120px; text-align: center;
+    }
+    #submitBtn {
+      font-size: 1.2em; padding: 10px 20px; border: none;
+      border-radius: 10px; background: linear-gradient(to bottom, #48cae4, #0096c7);
+      color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    #progress { margin-top:10px; font-size:1.1em; color:#333; }
+    #levelUp { font-size: 2em; color: #ffb703; font-weight: bold; display: none; }
+    .starFly { position: absolute; font-size: 2em; animation: fly 1s ease-out forwards; }
+    @keyframes fly { from{ transform:translateY(0); opacity:1; }
+                     to{ transform:translateY(-150px); opacity:0; } }
+    canvas { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+    #options button {
+      font-size: 1.2em; margin: 5px; padding: 10px 20px;
+      border-radius: 10px; border: none;
+      background: linear-gradient(to bottom, #48cae4, #0096c7);
+      color: white; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- 開始頁 -->
+  <div id="startScreen">
+    <h1>全一AI數學小助手 🤖</h1>
+    <button id="startBtn">開始遊戲</button>
+    <button id="teacherBtn">老師模式</button>
+    <button id="musicBtn">🎵 音樂: 開</button>
+
+    <!-- 老師模式設定 -->
+    <div id="teacherPanel">
+      <h3>選擇要練習的題型：</h3>
+      <label><input type="checkbox" value="0"> 數字題</label><br>
+      <label><input type="checkbox" value="1"> 水果數數題</label><br>
+      <label><input type="checkbox" value="2"> 長短題</label><br>
+      <label><input type="checkbox" value="3"> 平面圖形題</label><br>
+      <label><input type="checkbox" value="4"> 方向題</label><br>
+      <label><input type="checkbox" value="5"> 立體圖形題</label><br><br>
+      題數：<input type="number" id="teacherTotal" value="20" min="5" max="50"> 題
+      <br><br>
+      <button id="teacherStartBtn">開始練習</button>
+    </div>
+  </div>
+
+  <!-- 狀態列 -->
+  <header style="display:none;" id="statusBar">
+    <div id="level">Level: 1</div>
+    <div id="stars">⭐ x 0</div>
+    <div id="timer">剩餘時間: 60 秒</div>
+  </header>
+
+  <!-- 遊戲區 -->
+  <div id="gameCard">
+    <img id="robotImg" src="https://twemoji.maxcdn.com/v/14.0.2/72x72/1f916.png">
+    <p id="question">準備好了嗎？</p>
+    <div id="picQuestion"></div>
+    <div id="feedback">輸入正確答案！</div>
+    <input type="text" id="answerInput" placeholder="答案">
+    <button id="submitBtn">提交答案</button>
+    <div id="options" style="margin:15px;"></div>
+    <div id="progress">第 0 / 0 題</div>
+    <button id="exitBtn">退出</button>
+    <div id="levelUp">LEVEL UP!</div>
+  </div>
+
+  <canvas id="fireworks"></canvas>
+
+  <!-- 音效 -->
+  <audio id="bgMusic" src="bg-music.mp3" loop></audio>
+  <audio id="correctSound" src="correct.mp3"></audio>
+  <audio id="wrongSound" src="wrong.mp3"></audio>
+
+<script>
+const questionEl=document.getElementById("question");
+const picQuestionEl=document.getElementById("picQuestion");
+const feedbackEl=document.getElementById("feedback");
+const answerInput=document.getElementById("answerInput");
+const submitBtn=document.getElementById("submitBtn");
+const starsEl=document.getElementById("stars");
+const levelEl=document.getElementById("level");
+const timerEl=document.getElementById("timer");
+const progressEl=document.getElementById("progress");
+const levelUpEl=document.getElementById("levelUp");
+const gameCard=document.getElementById("gameCard");
+const startScreen=document.getElementById("startScreen");
+const startBtn=document.getElementById("startBtn");
+const teacherBtn=document.getElementById("teacherBtn");
+const teacherPanel=document.getElementById("teacherPanel");
+const teacherStartBtn=document.getElementById("teacherStartBtn");
+const statusBar=document.getElementById("statusBar");
+const musicBtn=document.getElementById("musicBtn");
+const exitBtn=document.getElementById("exitBtn");
+const bgMusic=document.getElementById("bgMusic");
+const correctSound=document.getElementById("correctSound");
+const wrongSound=document.getElementById("wrongSound");
+
+let correctAnswer=0, starCount=0, level=1, timeLeft=60, timer;
+let lastType=-1; 
+let musicOn=true;
+let teacherMode=false;
+let teacherTypes=[];
+let totalQuestions=20;
+let currentQuestion=0;
+
+function startTimer(){ clearInterval(timer); timeLeft=60;
+  timer=setInterval(()=>{ timeLeft--; timerEl.textContent=`剩餘時間: ${timeLeft} 秒`;
+    if(timeLeft<=0){ clearInterval(timer); endGame(); }},1000); }
+
+function generateQuestion(){
+  if(currentQuestion>=totalQuestions){ endGame(); return; }
+  currentQuestion++;
+  progressEl.textContent=`第 ${currentQuestion} / ${totalQuestions} 題`;
+
+  let questionType;
+  if(teacherMode && teacherTypes.length>0){
+    do {
+      questionType = parseInt(teacherTypes[Math.floor(Math.random()*teacherTypes.length)]);
+    } while (questionType===lastType && teacherTypes.length>1);
+  } else {
+    do {
+      questionType = Math.floor(Math.random() * 6);
+    } while (questionType===lastType);
+  }
+  lastType=questionType;
+
+  answerInput.style.display="inline-block";
+  submitBtn.style.display="inline-block";
+  document.getElementById("options").innerHTML="";
+
+  let a=Math.floor(Math.random()*(level*10))+1;
+  let b=Math.floor(Math.random()*(level*10))+1;
+  let isAdd=Math.random()>0.5;
+  const fruits=["🍎","🍌","🍓","🍇","🍊"];
+  let fruit=fruits[Math.floor(Math.random()*fruits.length)];
+
+  if(questionType===0){
+    picQuestionEl.innerHTML="";
+    if(isAdd){ correctAnswer=a+b; questionEl.textContent=`${a} + ${b} = ?`; }
+    else{ if(a<b)[a,b]=[b,a]; correctAnswer=a-b; questionEl.textContent=`${a} - ${b} = ?`; }
+  }
+  else if(questionType===1){
+    let n=Math.floor(Math.random()*(level*10))+1;
+    correctAnswer=n; questionEl.textContent="有幾個？";
+    picQuestionEl.innerHTML=fruit.repeat(n);
+  }
+  else if(questionType===2){
+    // 長短題：隨機問長或短
+    let emojis=["🚋","🪵","🍫","🧵","📏"];
+    let symbol=emojis[Math.floor(Math.random()*emojis.length)];
+    let len1=Math.floor(Math.random()*4)+3;
+    let len2=Math.floor(Math.random()*4)+3;
+    while(len1===len2){ len2=Math.floor(Math.random()*4)+3; }
+    let askLong=Math.random()>0.5;
+    questionEl.textContent=askLong?"哪個比較長？":"哪個比較短？";
+    picQuestionEl.innerHTML=`1️⃣ ${symbol.repeat(len1)}<br><br>2️⃣ ${symbol.repeat(len2)}`;
+    if(askLong){ correctAnswer=len1>len2?1:2; } else { correctAnswer=len1<len2?1:2; }
+    showOptions([{text:"1️⃣",value:1},{text:"2️⃣",value:2}]);
+  }
+  else if(questionType===3){
+    let shapes=[
+      {img:"circle.png",answer:1,name:"圓形"},
+      {img:"triangle.png",answer:2,name:"三角形"},
+      {img:"square.png",answer:3,name:"正方形"},
+      {img:"rectangle.png",answer:4,name:"長方形"}
+    ];
+    let chosen=shapes[Math.floor(Math.random()*shapes.length)];
+    questionEl.textContent="這是什麼圖形？";
+    picQuestionEl.innerHTML=`<img src="${chosen.img}" style="width:120px;height:120px;">`;
+    correctAnswer=chosen.answer;
+    showOptions([
+      {text:"圓形",value:1},{text:"三角形",value:2},
+      {text:"正方形",value:3},{text:"長方形",value:4}
+    ]);
+  }
+  else if(questionType===4){
+    let objects=["🍎","🍌","🍓","🍊","🍇"];
+    let obj1=objects[Math.floor(Math.random()*objects.length)];
+    let obj2=objects[Math.floor(Math.random()*objects.length)];
+    while(obj1===obj2){ obj2=objects[Math.floor(Math.random()*objects.length)]; }
+    let dirs=[{answer:"上"},{answer:"下"},{answer:"左"},{answer:"右"}];
+    let chosen=dirs[Math.floor(Math.random()*dirs.length)];
+    questionEl.textContent=`${obj1} 在 ${obj2} 的哪一邊？`;
+    let layout="";
+    if(chosen.answer==="上"){ layout=`${obj1}<br>${obj2}`; }
+    else if(chosen.answer==="下"){ layout=`${obj2}<br>${obj1}`; }
+    else if(chosen.answer==="左"){ layout=`${obj1} ${obj2}`; }
+    else if(chosen.answer==="右"){ layout=`${obj2} ${obj1}`; }
+    picQuestionEl.innerHTML=`<div style="font-size:2em; line-height:1.5em;">${layout}</div>`;
+    correctAnswer=chosen.answer;
+    showOptions([
+      {text:"上",value:"上"},{text:"下",value:"下"},
+      {text:"左",value:"左"},{text:"右",value:"右"}
+    ]);
+  }
+  else if(questionType===5){
+    let solids=[
+      {img:"prism.png",answer:1,name:"角柱"},
+      {img:"cylinder.png",answer:2,name:"圓柱"},
+      {img:"pyramid.png",answer:3,name:"角錐"},
+      {img:"cone.png",answer:4,name:"圓錐"},
+      {img:"sphere.png",answer:5,name:"球"}
+    ];
+    let chosen=solids[Math.floor(Math.random()*solids.length)];
+    questionEl.textContent="這是什麼立體圖形？";
+    picQuestionEl.innerHTML=`<img src="${chosen.img}" style="width:120px;height:120px;">`;
+    correctAnswer=chosen.answer;
+    showOptions([
+      {text:"角柱",value:1},{text:"圓柱",value:2},
+      {text:"角錐",value:3},{text:"圓錐",value:4},
+      {text:"球",value:5}
+    ]);
+  }
+  feedbackEl.textContent="請作答！";
+}
+
+function showOptions(optionList){
+  const optionsDiv=document.getElementById("options");
+  optionsDiv.innerHTML="";
+  answerInput.style.display="none";
+  submitBtn.style.display="none";
+  optionList.forEach(opt=>{
+    let btn=document.createElement("button");
+    btn.textContent=opt.text;
+    btn.onclick=()=>checkOption(opt.value);
+    optionsDiv.appendChild(btn);
+  });
+}
+
+function checkOption(value){
+  if(value===correctAnswer){
+    feedbackEl.textContent="🎉 答對了！";
+    starCount++; updateUI(); showStar(); correctSound.play();
+    generateQuestion();
+  } else { feedbackEl.textContent="❌ 再試一次！"; wrongSound.play(); }
+}
+
+function checkAnswer(){
+  let userInput=answerInput.value.trim();
+  if(!userInput){ feedbackEl.textContent="⚠️ 請輸入答案！"; return; }
+  let userAns=isNaN(userInput)?userInput:userInput*1;
+  if(userAns===correctAnswer){
+    feedbackEl.textContent="🎉 答對了！";
+    starCount++; updateUI(); showStar(); correctSound.play();
+    answerInput.value=""; generateQuestion();
+  } else { feedbackEl.textContent="❌ 再試一次！"; wrongSound.play(); }
+}
+
+function updateUI(){ starsEl.textContent=`⭐ x ${starCount}`; levelEl.textContent=`Level: ${level}`; }
+function showStar(){ const s=document.createElement("div"); s.textContent="⭐"; s.className="starFly";
+  s.style.left="50%"; s.style.top="60%"; gameCard.appendChild(s); setTimeout(()=>s.remove(),1000); }
+
+function endGame(){ questionEl.textContent="📚 完成！"; picQuestionEl.innerHTML="";
+  feedbackEl.innerHTML=`你答完 ${totalQuestions} 題，得到 ${starCount} 顆星！<br><button id="restartBtn">重新開始</button>`;
+  answerInput.disabled=true; submitBtn.disabled=true;
+  document.getElementById("restartBtn").addEventListener("click",restartGame); }
+
+function restartGame(){ returnToStart(); }
+
+function returnToStart(){
+  clearInterval(timer);
+  starCount=0; level=1; lastType=-1; currentQuestion=0;
+  progressEl.textContent=`第 0 / 0 題`;
+  startScreen.style.display="flex";
+  statusBar.style.display="none";
+  gameCard.style.display="none";
+  feedbackEl.textContent="輸入正確答案！";
+  answerInput.disabled=false; submitBtn.disabled=false;
+}
+
+exitBtn.addEventListener("click",returnToStart);
+
+startBtn.addEventListener("click",()=>{ 
+  teacherMode=false; totalQuestions=20; currentQuestion=0;
+  progressEl.textContent=`第 0 / ${totalQuestions} 題`;
+  startScreen.style.display="none"; statusBar.style.display="flex"; gameCard.style.display="block"; 
+  generateQuestion(); startTimer(); if(musicOn)bgMusic.play();
+});
+
+teacherBtn.addEventListener("click",()=>{ teacherPanel.style.display="block"; });
+
+teacherStartBtn.addEventListener("click",()=>{
+  teacherTypes=[...teacherPanel.querySelectorAll("input:checked")].map(cb=>cb.value);
+  if(teacherTypes.length===0){ alert("請至少選擇一個題型！"); return; }
+  totalQuestions=parseInt(document.getElementById("teacherTotal").value)||20;
+  currentQuestion=0;
+  progressEl.textContent=`第 0 / ${totalQuestions} 題`;
+  teacherMode=true;
+  startScreen.style.display="none"; statusBar.style.display="flex"; gameCard.style.display="block";
+  generateQuestion(); startTimer(); if(musicOn)bgMusic.play();
+});
+
+musicBtn.addEventListener("click",()=>{ if(musicOn){ bgMusic.pause(); musicBtn.textContent="🎵 音樂: 關"; }
+  else{ bgMusic.play(); musicBtn.textContent="🎵 音樂: 開"; } musicOn=!musicOn; });
+
+submitBtn.addEventListener("click",checkAnswer);
+answerInput.addEventListener("keypress",(e)=>{ if(e.key==="Enter")checkAnswer(); });
+
+</script>
+</body>
+</html>
