@@ -84,7 +84,7 @@
       <h3>選擇要練習的題型：</h3>
       <label><input type="checkbox" value="0"> 數字題</label><br>
       <label><input type="checkbox" value="1"> 水果數數題</label><br>
-      <label><input type="checkbox" value="2"> 長短題</label><br>
+      <label><input type="checkbox" value="2"> 數量比較題</label><br>
       <label><input type="checkbox" value="3"> 平面圖形題</label><br>
       <label><input type="checkbox" value="4"> 方向題</label><br>
       <label><input type="checkbox" value="5"> 立體圖形題</label><br><br>
@@ -182,7 +182,7 @@ function generateQuestion(){
   let a=Math.floor(Math.random()*(level*10))+1;
   let b=Math.floor(Math.random()*(level*10))+1;
   let isAdd=Math.random()>0.5;
-  const fruits=["🍎","🍌","🍓","🍇","🍊"];
+  const fruits=["🍎","🍌","🍓","🍊"]; // 移除🍇
   let fruit=fruits[Math.floor(Math.random()*fruits.length)];
 
   if(questionType===0){
@@ -196,16 +196,16 @@ function generateQuestion(){
     picQuestionEl.innerHTML=fruit.repeat(n);
   }
   else if(questionType===2){
-    // 長短題：隨機問長或短
-    let emojis=["🚋","🪵","🍫","🧵","📏"];
+    // 數量比較題：隨機問比較多或比較少
+    let emojis=["🍎","🍌","🍓","🍊"];
     let symbol=emojis[Math.floor(Math.random()*emojis.length)];
-    let len1=Math.floor(Math.random()*4)+3;
-    let len2=Math.floor(Math.random()*4)+3;
-    while(len1===len2){ len2=Math.floor(Math.random()*4)+3; }
-    let askLong=Math.random()>0.5;
-    questionEl.textContent=askLong?"哪個比較長？":"哪個比較短？";
+    let len1=Math.floor(Math.random()*5)+2;
+    let len2=Math.floor(Math.random()*5)+2;
+    while(len1===len2){ len2=Math.floor(Math.random()*5)+2; }
+    let askMore=Math.random()>0.5;
+    questionEl.textContent=askMore?"哪個比較多？":"哪個比較少？";
     picQuestionEl.innerHTML=`1️⃣ ${symbol.repeat(len1)}<br><br>2️⃣ ${symbol.repeat(len2)}`;
-    if(askLong){ correctAnswer=len1>len2?1:2; } else { correctAnswer=len1<len2?1:2; }
+    if(askMore){ correctAnswer=len1>len2?1:2; } else { correctAnswer=len1<len2?1:2; }
     showOptions([{text:"1️⃣",value:1},{text:"2️⃣",value:2}]);
   }
   else if(questionType===3){
@@ -225,7 +225,7 @@ function generateQuestion(){
     ]);
   }
   else if(questionType===4){
-    let objects=["🍎","🍌","🍓","🍊","🍇"];
+    let objects=["🍎","🍌","🍓","🍊"];
     let obj1=objects[Math.floor(Math.random()*objects.length)];
     let obj2=objects[Math.floor(Math.random()*objects.length)];
     while(obj1===obj2){ obj2=objects[Math.floor(Math.random()*objects.length)]; }
